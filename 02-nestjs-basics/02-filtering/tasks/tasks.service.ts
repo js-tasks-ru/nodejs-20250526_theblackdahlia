@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Task, TaskStatus } from "./task.model";
 
 @Injectable()
@@ -40,5 +40,40 @@ export class TasksService {
     status?: TaskStatus,
     page?: number,
     limit?: number,
-  ): Task[] {}
+    sortBy?: 'title' | 'status',
+  ): Task[] {
+     let filteredTasks = this.tasks;
+
+     // Фильтрация
+     if(status) {
+       if(!Object.values(TaskStatus).includes(status)) {
+          throw new BadRequestException('Invalid status value');
+       }
+       filteredTasks = filteredTasks.filter(task => task.status === status);
+     }
+
+    // Пагинация
+     if (page !== undefined || limit !== undefined) {
+       if (page < 1 || limit < 1) {
+          throw new BadRequestException('Invalid page number');
+       }
+       const startIndex = (page - 1) * limit;
+       const endIndex = startIndex + limit;
+       filteredTasks = filteredTasks.slice(startIndex, endIndex);
+
+       if (filteredTasks.length === 0) {
+          return [...filteredTasks];
+       }
+     }
+
+     if (sortBy) {
+       if (sortBy !== 'title' && sortBy !== 'status') {
+          throw new BadRequestException('Invalid sort by');
+       }
+
+       filteredTasks = filteredTasks.sort((a,b) => a[sortBy].localeCompare(b[sortBy]));
+     }
+
+    return filteredTasks
+  }
 }
